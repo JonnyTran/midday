@@ -1,5 +1,5 @@
 import { updateSession } from "@midday/supabase/middleware";
-import { createClient } from "@midday/supabase/server";
+import { createServerClient } from "@supabase/ssr";
 import { createI18nMiddleware } from "next-international/middleware";
 import { type NextRequest, NextResponse } from "next/server";
 
@@ -11,7 +11,27 @@ const I18nMiddleware = createI18nMiddleware({
 
 export async function middleware(request: NextRequest) {
   const response = await updateSession(request, I18nMiddleware(request));
-  const supabase = await createClient();
+
+  // Create Supabase client with proper middleware context
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          request.cookies.set({ name, value, ...options });
+          response.cookies.set({ name, value, ...options });
+        },
+        remove(name: string, options: any) {
+          request.cookies.set({ name, value: "", ...options });
+          response.cookies.set({ name, value: "", ...options });
+        },
+      },
+    },
+  );
   const url = new URL("/", request.url);
   const nextUrl = request.nextUrl;
 
@@ -25,9 +45,8 @@ export async function middleware(request: NextRequest) {
   // Create a new URL without the locale in the pathname
   const newUrl = new URL(pathnameWithoutLocale || "/", request.url);
 
-  const encodedSearchParams = `${newUrl?.pathname?.substring(1)}${
-    newUrl.search
-  }`;
+  const encodedSearchParams = `${newUrl?.pathname?.substring(1)}${newUrl.search
+    }`;
 
   const {
     data: { session },

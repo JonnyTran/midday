@@ -8,8 +8,17 @@ RUN bun add -g turbo
 # Builder stage
 FROM turbo-cli AS builder
 WORKDIR /app
-# Copy all files
-COPY . .
+
+# Copy only the files needed for turbo prune to work
+# These files are required for turbo to understand the workspace structure
+COPY package.json ./
+COPY turbo.json ./
+COPY bun.lock ./
+
+# Copy workspace package.json files (turbo needs these to understand dependencies)
+COPY apps/ ./apps/
+COPY packages/ ./packages/
+
 # Use turbo CLI from Bun global install to prune workspaces
 RUN turbo prune @midday/dashboard --docker
 
@@ -26,8 +35,21 @@ RUN bun install
 # Copy the full source code
 COPY --from=builder /app/out/full/ .
 
+# Build arguments for environment variables
 ARG RESEND_API_KEY
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_SUPABASE_ID
+ARG VERCEL_URL
+ARG VERCEL_ENV
+
+# Set environment variables for build
 ENV RESEND_API_KEY=$RESEND_API_KEY
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_SUPABASE_ID=$NEXT_PUBLIC_SUPABASE_ID
+ENV VERCEL_URL=$VERCEL_URL
+ENV VERCEL_ENV=$VERCEL_ENV
 
 # Build the dashboard and its dependencies
 RUN turbo build --filter="@midday/dashboard..."
