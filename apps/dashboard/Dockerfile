@@ -56,6 +56,11 @@ RUN turbo build --filter="@midday/dashboard..."
 
 # Runner stage
 FROM base AS runner
+
+USER root
+RUN apt-get update && apt-get install -y ca-certificates --no-install-recommends
+USER bun
+
 WORKDIR /app
 
 # Copy the built application

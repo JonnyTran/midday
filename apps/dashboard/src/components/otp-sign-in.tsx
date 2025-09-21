@@ -1,6 +1,7 @@
 "use client";
 
 import { verifyOtpAction } from "@/actions/verify-otp-action";
+import { getAppUrl } from "@midday/utils/envs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClient } from "@midday/supabase/client";
 import { cn } from "@midday/ui/cn";
@@ -44,7 +45,12 @@ export function OTPSignIn({ className }: Props) {
 
     setEmail(email);
 
-    await supabase.auth.signInWithOtp({ email });
+    await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: getAppUrl(),
+      },
+    });
 
     setSent(true);
     setLoading(false);
